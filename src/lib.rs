@@ -1,11 +1,11 @@
 
-pub struct StrSplit<'haystack, 'remainder> {
+pub struct StrSplit<'haystack, D> {
     remainder: Option<&'haystack str>,
-    delimeter: &'remainder str,
+    delimeter: D,
 }
 
-impl<'haystack, 'remainder> StrSplit<'haystack, 'remainder> {
-    pub fn new(haystack: &'haystack str, delimeter: &'remainder str) -> Self {
+impl<'haystack, D> StrSplit<'haystack, D> {
+    pub fn new(haystack: &'haystack str, delimeter: D) -> Self {
         Self {
             remainder: Some(haystack),
             delimeter: delimeter ,
@@ -13,20 +13,32 @@ impl<'haystack, 'remainder> StrSplit<'haystack, 'remainder> {
     }
 }
 
-// trait Delimeter {
-//     fn find_next(&self, s: &str) -> Option<(usize, usize)>;
-// }
+trait Delimeter {
+    fn find_next(&self, s: &str) -> Option<(usize, usize)>;
+}
 
-impl<'haystack, 'remainder> Iterator for StrSplit <'haystack, 'remainder> {
+impl<'haystack, D> Iterator for StrSplit <'haystack, D>
+where 
+D: Delimeter {
     type Item = &'haystack str;
     fn next(&mut self) -> Option<Self::Item> {
         let remainder = self.remainder.as_mut()?;
-        if let Some(next_delim) = remainder.find(self.delimeter) {
-            let until_delimeter = &remainder[..next_delim];
-            *remainder = &remainder[(next_delim + self.delimeter.len())..];
+        if let Some((delim_start , delim_end)) = self.delimeter.find_next(remainder) {
+            let until_delimeter = &remainder[..delim_start];
+            *remainder = &remainder[delim_end..];
             Some(until_delimeter)
         } else {
             self.remainder.take()
         }
     }
+}
+
+impl Delimeter for &str {
+    fn find_next(&self, s: &str) -> Option<(usize, usize)> {
+        s.find(self).map(|start| (start , start + self.len()))
+    }
+}
+
+impl Delimeter for char {
+    
 }
